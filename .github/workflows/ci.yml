@@ -19,6 +19,12 @@ jobs:
 
       - run: npm ci
 
+      # tsconfig.json includes .next/types/**/*.ts (Next's generated
+      # route types, e.g. LayoutProps) - they only exist after a build or
+      # dev run, which a fresh CI checkout has never done. `next typegen`
+      # generates just those types without a full build.
+      - run: npx next typegen
+
       - run: npm run typecheck
 
       - run: npm run lint
