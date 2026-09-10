@@ -447,6 +447,10 @@ export type Database = {
         Args: { p_class_id: string; p_rows: Json }
         Returns: Json
       }
+      update_attendance_batch: {
+        Args: { p_payload_hash: string; p_request_id: string; p_updates: Json }
+        Returns: Json
+      }
     }
     Enums: {
       attendance_status: "P" | "A" | "L" | "Ex"
