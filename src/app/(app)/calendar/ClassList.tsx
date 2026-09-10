@@ -66,6 +66,12 @@ export function ClassList({
                 </td>
                 <td className="py-2 text-slate-600">{yearLabel(klass.academic_year_id)}</td>
                 <td className="py-2 text-right space-x-2">
+                  <a
+                    href={`/register/${klass.id}`}
+                    className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  >
+                    Open register
+                  </a>
                   <button
                     type="button"
                     disabled={busyId === klass.id}

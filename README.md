@@ -5,7 +5,8 @@ Class attendance register app. Full product/technical spec:
 
 ## Status
 
-**Stage 3 of 8 complete** (classes/calendar/students, per spec section 9).
+**Stage 6 of 8 complete** (attendance engine, register interface, and
+persistence integrity, per spec section 9).
 
 Done:
 
@@ -31,12 +32,30 @@ Done:
   (validated, transactional via the `import_students` Postgres function),
   an alphabetically-grouped boys/girls roster filterable by an "as of"
   date so mid-month arrivals/withdrawals show correctly, and withdrawal.
+- Attendance rule engine (`src/lib/attendance/rules.ts`,
+  `summaries.ts`) — the single source of truth for attendance credit and
+  daily/monthly summaries, unit tested (`npm run test`, vitest) against
+  spec section 9's full hand-calculated fixture plus boundary cases.
+- Register grid (`/register/[classId]`): the paper-style monthly
+  register — merged day/date headers, sticky name/header columns,
+  BOYS/GIRLS sections with live subtotals, keyboard-operable cells
+  (arrows to navigate, P/A/L/E to set, Delete to clear, Enter/click for a
+  menu), future-date and closed-session cells disabled, a "mark unmarked
+  present" action with a preview/confirm step, and a saving/saved
+  indicator.
+- Atomic attendance persistence: `update_attendance_batch` (Postgres
+  function, `POST /api/attendance`) applies up to 100 cell updates per
+  call with compare-and-swap revisions, returns a structured 409 with
+  authoritative values on conflict (never silently overwrites another
+  tab), is idempotent on request-id retry via `command_receipts`, and
+  leaves zero partial writes on any failure — verified directly against
+  the linked project (create, idempotent retry, rejected payload
+  mismatch, conflict, and a mixed valid+conflicting batch leaving both
+  halves unapplied).
 - `.env.example` with the three required env vars.
 
-Not yet done (stages 4-8): the attendance rule engine and register grid
-are unimplemented stubs, no reports/export, no atomic batch-command/
-revision/idempotency endpoints, no CI, and this has not been deployed
-anywhere.
+Not yet done (stages 7-8): no reports/CSV export/print views, no CI, and
+this has not been deployed anywhere.
 
 ## Setup
 
@@ -52,6 +71,7 @@ npm run dev
 - `npm run build` — production build
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run lint` — ESLint
+- `npm run test` — vitest (attendance rule engine unit tests)
 
 ## Environment variables
 
