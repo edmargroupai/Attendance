@@ -4,6 +4,7 @@ import {
   isEnrolmentActiveOn,
   summarizePeriod,
   summarizeSession,
+  summarizeStudent,
   type AttendanceEntry,
   type EnrolmentInfo,
   type OpenSlot,
@@ -111,6 +112,32 @@ describe("summarizeSession — spec section 9 fixture, per-day breakdown", () =>
     expect(afternoon.boys.attendanceTotal).toBe(2);
     expect(afternoon.girls.attendanceTotal).toBe(2);
     expect(afternoon.combined.attendanceTotal).toBe(4);
+  });
+});
+
+describe("summarizeStudent — spec section 8 'per-student monthly summary'", () => {
+  it("each student's attended total matches their column in the fixture table", () => {
+    const expected: Record<string, number> = { brown: 3, edwards: 2, adams: 3, williams: 1 };
+    for (const enrolment of enrolments) {
+      const summary = summarizeStudent(enrolment, slots, marks);
+      expect(summary.attendedSessions).toBe(expected[enrolment.id]);
+      expect(summary.possibleSessions).toBe(4);
+      expect(summary.completion).toBe(100);
+    }
+  });
+
+  it("Williams (A/Ex/L/P) has 1 attended, 3 marks contributing zero credit but still marked", () => {
+    const williams = enrolments.find((e) => e.id === "williams")!;
+    const summary = summarizeStudent(williams, slots, marks);
+    expect(summary.statusTotals).toEqual({ P: 1, A: 1, L: 1, Ex: 1, Unmarked: 0 });
+    expect(summary.attendedSessions).toBe(1);
+  });
+
+  it("summarizePeriod's boys/girls status totals sum to the combined total (built from summarizeStudent)", () => {
+    const totals = summarizePeriod(slots, enrolments, marks);
+    expect(totals.boysStatusTotals).toEqual({ P: 4, A: 2, L: 2, Ex: 0, Unmarked: 0 });
+    expect(totals.girlsStatusTotals).toEqual({ P: 4, A: 1, L: 1, Ex: 2, Unmarked: 0 });
+    expect(totals.statusTotals).toEqual({ P: 8, A: 3, L: 3, Ex: 2, Unmarked: 0 });
   });
 });
 

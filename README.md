@@ -5,8 +5,7 @@ Class attendance register app. Full product/technical spec:
 
 ## Status
 
-**Stage 6 of 8 complete** (attendance engine, register interface, and
-persistence integrity, per spec section 9).
+**Stage 7 of 8 complete** (summaries/exports, per spec section 9).
 
 Done:
 
@@ -52,10 +51,23 @@ Done:
   the linked project (create, idempotent retry, rejected payload
   mismatch, conflict, and a mixed valid+conflicting batch leaving both
   halves unapplied).
+- Reports (`/reports`): boys/girls/combined monthly summary, per-student
+  monthly summary, daily session summary, and a printable landscape
+  register (repeated headers, segmented by week) — all built on the
+  Stage-4 engine so they can't drift from the register grid. CSV export
+  for all four report types (`src/lib/exports/`), with formula-injection
+  neutralisation and correct quoting for user-entered text fields. Every
+  report/export states school, class, period, generation time, rule
+  version, and completion status.
 - `.env.example` with the three required env vars.
 
-Not yet done (stages 7-8): no reports/CSV export/print views, no CI, and
-this has not been deployed anywhere.
+Not yet done (stage 8): no CI, mobile/desktop browser checks, or
+deployment. Also note: the Reports page's on-screen rendering has been
+verified via unit tests reproducing spec section 9's fixture through the
+same export builders and the identical SSR data-fetching pattern already
+proven end-to-end in Stages 3/5, but not interactively clicked through in
+a real browser (no browser-automation tool available in this session) —
+worth a manual look before relying on it.
 
 ## Setup
 

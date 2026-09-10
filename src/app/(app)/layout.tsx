@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between border-b border-slate-200 px-6 py-3">
+      <header className="flex items-center justify-between border-b border-slate-200 px-6 py-3 print:hidden">
         <div className="flex items-center gap-6">
           <span className="text-sm font-semibold text-slate-900">
             EdMar Attendance Register

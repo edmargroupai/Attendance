@@ -1,3 +1,9 @@
+// Bump whenever the credit/summary rules themselves change (not for
+// unrelated code changes). Reports display this so a printed/exported
+// page is traceable to the rule version that produced it (spec section
+// 8: "rule version").
+export const ATTENDANCE_RULE_VERSION = "1.0";
+
 // Spec section 2 — authoritative. Morning P counts 1; afternoon P or L
 // counts 1. A morning L records lateness but does not generate an
 // afternoon mark; the teacher records afternoon attendance

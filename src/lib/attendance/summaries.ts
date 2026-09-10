@@ -127,20 +127,6 @@ export interface GroupTotals {
   total: number;
 }
 
-export interface PeriodTotals {
-  scheduledClassSessions: number;
-  possibleStudentSessions: number;
-  attendedStudentSessions: number;
-  boysAttended: GroupTotals;
-  girlsAttended: GroupTotals;
-  combinedAttended: GroupTotals;
-  statusTotals: StatusCounts;
-  /** Marked eligible slots / possible student-slots, as a percentage. `null` means N/A (zero denominator). */
-  completion: number | null;
-  /** Attended / possible, as a percentage. `null` means N/A (zero denominator). Provisional until completion is 100. */
-  attendancePercentage: number | null;
-}
-
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
 }
@@ -149,11 +135,92 @@ function emptyGroupTotals(): GroupTotals {
   return { morning: 0, afternoon: 0, total: 0 };
 }
 
+function completionOf(possibleSessions: number, markedEligibleSlots: number): number | null {
+  return possibleSessions === 0 ? null : round1((markedEligibleSlots / possibleSessions) * 100);
+}
+
+function attendancePercentageOf(possibleSessions: number, attendedSessions: number): number | null {
+  return possibleSessions === 0 ? null : round1((attendedSessions / possibleSessions) * 100);
+}
+
+export interface StudentSummary {
+  enrolmentId: string;
+  registerGroup: "Boy" | "Girl";
+  possibleSessions: number;
+  attendedSessions: number;
+  morningAttended: number;
+  afternoonAttended: number;
+  statusTotals: StatusCounts;
+  /** Marked eligible slots / possible slots, as a percentage. `null` means N/A (zero denominator). */
+  completion: number | null;
+  /** Attended / possible, as a percentage. `null` means N/A (zero denominator). Provisional until completion is 100. */
+  attendancePercentage: number | null;
+}
+
+// Per-student monthly summary (spec section 8: "per-student monthly
+// summary"). summarizePeriod below is built on top of this, so the
+// per-student report and the class-wide totals can never drift apart.
+export function summarizeStudent(
+  enrolment: EnrolmentInfo,
+  slots: OpenSlot[],
+  marks: AttendanceEntry[],
+): StudentSummary {
+  const eligible = eligibleSlotsFor(enrolment, slots);
+  const statusTotals = emptyStatusCounts();
+  let attendedSessions = 0;
+  let morningAttended = 0;
+  let afternoonAttended = 0;
+
+  for (const slot of eligible) {
+    const status = findMark(marks, enrolment.id, slot.date, slot.session);
+    if (status === null) statusTotals.Unmarked += 1;
+    else statusTotals[status] += 1;
+
+    const credit = attendanceCredit(slot.session, status);
+    attendedSessions += credit;
+    if (slot.session === 1) morningAttended += credit;
+    else afternoonAttended += credit;
+  }
+
+  const possibleSessions = eligible.length;
+  const markedEligibleSlots = possibleSessions - statusTotals.Unmarked;
+
+  return {
+    enrolmentId: enrolment.id,
+    registerGroup: enrolment.registerGroup,
+    possibleSessions,
+    attendedSessions,
+    morningAttended,
+    afternoonAttended,
+    statusTotals,
+    completion: completionOf(possibleSessions, markedEligibleSlots),
+    attendancePercentage: attendancePercentageOf(possibleSessions, attendedSessions),
+  };
+}
+
+export interface PeriodTotals {
+  scheduledClassSessions: number;
+  possibleStudentSessions: number;
+  attendedStudentSessions: number;
+  boysAttended: GroupTotals;
+  girlsAttended: GroupTotals;
+  combinedAttended: GroupTotals;
+  /** Raw mark counts (not attendance credits), combined across both groups. */
+  statusTotals: StatusCounts;
+  boysStatusTotals: StatusCounts;
+  girlsStatusTotals: StatusCounts;
+  /** Marked eligible slots / possible student-slots, as a percentage. `null` means N/A (zero denominator). */
+  completion: number | null;
+  /** Attended / possible, as a percentage. `null` means N/A (zero denominator). Provisional until completion is 100. */
+  attendancePercentage: number | null;
+}
+
 // Period (e.g. one month) totals: scheduled sessions, possible/attended
 // student-sessions, boys/girls/combined splits, raw status totals, and
-// completion/attendance percentages. Spec section 9's hand-calculated
-// fixture is reproduced exactly by this function in
-// tests/unit/summaries.test.ts.
+// completion/attendance percentages. Built by aggregating summarizeStudent
+// over every enrolment, so class-wide totals and the per-student report
+// are guaranteed consistent. Spec section 9's hand-calculated fixture is
+// reproduced exactly by this function in tests/unit/summaries.test.ts.
 export function summarizePeriod(
   slots: OpenSlot[],
   enrolments: EnrolmentInfo[],
@@ -166,30 +233,27 @@ export function summarizePeriod(
   let attendedStudentSessions = 0;
   const boysAttended = emptyGroupTotals();
   const girlsAttended = emptyGroupTotals();
-  const statusTotals = emptyStatusCounts();
+  const boysStatusTotals = emptyStatusCounts();
+  const girlsStatusTotals = emptyStatusCounts();
 
   for (const enrolment of enrolments) {
-    const eligible = eligibleSlotsFor(enrolment, slots);
-    possibleStudentSessions += eligible.length;
+    const student = summarizeStudent(enrolment, slots, marks);
 
-    const bucket = enrolment.registerGroup === "Boy" ? boysAttended : girlsAttended;
+    possibleStudentSessions += student.possibleSessions;
+    markedEligibleSlots += student.possibleSessions - student.statusTotals.Unmarked;
+    attendedStudentSessions += student.attendedSessions;
 
-    for (const slot of eligible) {
-      const status = findMark(marks, enrolment.id, slot.date, slot.session);
+    const attendedBucket = enrolment.registerGroup === "Boy" ? boysAttended : girlsAttended;
+    attendedBucket.total += student.attendedSessions;
+    attendedBucket.morning += student.morningAttended;
+    attendedBucket.afternoon += student.afternoonAttended;
 
-      if (status === null) {
-        statusTotals.Unmarked += 1;
-      } else {
-        statusTotals[status] += 1;
-        markedEligibleSlots += 1;
-      }
-
-      const credit = attendanceCredit(slot.session, status);
-      attendedStudentSessions += credit;
-      bucket.total += credit;
-      if (slot.session === 1) bucket.morning += credit;
-      else bucket.afternoon += credit;
-    }
+    const statusBucket = enrolment.registerGroup === "Boy" ? boysStatusTotals : girlsStatusTotals;
+    statusBucket.P += student.statusTotals.P;
+    statusBucket.A += student.statusTotals.A;
+    statusBucket.L += student.statusTotals.L;
+    statusBucket.Ex += student.statusTotals.Ex;
+    statusBucket.Unmarked += student.statusTotals.Unmarked;
   }
 
   const combinedAttended: GroupTotals = {
@@ -198,15 +262,6 @@ export function summarizePeriod(
     total: boysAttended.total + girlsAttended.total,
   };
 
-  const completion =
-    possibleStudentSessions === 0
-      ? null
-      : round1((markedEligibleSlots / possibleStudentSessions) * 100);
-  const attendancePercentage =
-    possibleStudentSessions === 0
-      ? null
-      : round1((attendedStudentSessions / possibleStudentSessions) * 100);
-
   return {
     scheduledClassSessions,
     possibleStudentSessions,
@@ -214,8 +269,10 @@ export function summarizePeriod(
     boysAttended,
     girlsAttended,
     combinedAttended,
-    statusTotals,
-    completion,
-    attendancePercentage,
+    statusTotals: addStatusCounts(boysStatusTotals, girlsStatusTotals),
+    boysStatusTotals,
+    girlsStatusTotals,
+    completion: completionOf(possibleStudentSessions, markedEligibleSlots),
+    attendancePercentage: attendancePercentageOf(possibleStudentSessions, attendedStudentSessions),
   };
 }
