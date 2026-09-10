@@ -10,10 +10,16 @@ export function CreateAcademicYearForm() {
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Captured before the first `await`: React nulls out the synthetic
+    // event (including currentTarget) once this handler yields, so
+    // reading it afterwards throws and silently aborts the rest of the
+    // function - including router.refresh(), which is why a successful
+    // create could appear to do nothing.
+    const form = event.currentTarget;
     setPending(true);
     setError(null);
 
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(form);
     const res = await fetch("/api/academic-years", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -31,7 +37,7 @@ export function CreateAcademicYearForm() {
       return;
     }
 
-    event.currentTarget.reset();
+    form.reset();
     router.refresh();
   }
 

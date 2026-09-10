@@ -22,10 +22,12 @@ export function CreateClassForm({ academicYears }: { academicYears: AcademicYear
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Captured before the first `await` - see CreateAcademicYearForm for why.
+    const form = event.currentTarget;
     setPending(true);
     setError(null);
 
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(form);
     const payload: Record<string, unknown> = {
       name: formData.get("name"),
       academic_year_id: formData.get("academic_year_id"),
@@ -47,7 +49,7 @@ export function CreateClassForm({ academicYears }: { academicYears: AcademicYear
       return;
     }
 
-    event.currentTarget.reset();
+    form.reset();
     router.refresh();
   }
 

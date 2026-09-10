@@ -18,12 +18,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between border-b border-slate-200 px-6 py-3 print:hidden">
-        <div className="flex items-center gap-6">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-slate-200 px-3 py-3 sm:px-6 print:hidden">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <span className="text-sm font-semibold text-slate-900">
             EdMar Attendance Register
           </span>
-          <nav className="flex gap-4 text-sm text-slate-600">
+          <nav aria-label="Main" className="flex flex-wrap gap-4 text-sm text-slate-600">
             <Link href="/students" className="hover:text-slate-900">
               Students
             </Link>
@@ -35,8 +35,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </Link>
           </nav>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-slate-500">{user.email}</span>
+        <div className="flex items-center gap-3">
+          <span className="hidden max-w-40 truncate text-sm text-slate-500 sm:inline">
+            {user.email}
+          </span>
           <form action={signOut}>
             <button
               type="submit"

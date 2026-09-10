@@ -10,10 +10,14 @@ export function AddStudentForm({ classId }: { classId: string }) {
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Captured before the first `await` - React nulls the synthetic
+    // event's currentTarget once the handler yields, so reading it after
+    // an await throws and silently aborts everything after it.
+    const form = event.currentTarget;
     setPending(true);
     setError(null);
 
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(form);
     const res = await fetch("/api/students", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -35,7 +39,7 @@ export function AddStudentForm({ classId }: { classId: string }) {
       return;
     }
 
-    event.currentTarget.reset();
+    form.reset();
     router.refresh();
   }
 
