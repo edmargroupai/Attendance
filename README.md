@@ -5,7 +5,7 @@ Class attendance register app. Full product/technical spec:
 
 ## Status
 
-**Stage 1 of 8 complete** (repository scaffold, per spec section 9).
+**Stage 2 of 8 complete** (database schema/RLS, per spec section 9).
 
 Done:
 
@@ -13,15 +13,22 @@ Done:
   dependency versions pinned.
 - Repository structure matching the spec's suggested layout (route groups,
   `src/lib/*`, `supabase/*`, `tests/*`).
-- Supabase client helpers (`src/lib/supabase/*`) written against
-  `@supabase/ssr`, not yet connected to a live project.
+- Supabase project linked (`supabase/config.toml`); `.env.local` has
+  working credentials (not committed).
+- Full schema in `supabase/migrations/`: `teacher_settings`,
+  `academic_years`, `terms`, `classes`, `students`, `enrolments`,
+  `calendar_sessions`, `attendance_records`, `audit_events`,
+  `command_receipts` — with composite-FK tenant isolation, RLS on every
+  table, a generic audit trigger, and cross-table invariant triggers
+  (term-in-academic-year, attendance/enrolment same-class).
+- pgTAP owner-isolation and constraint tests in `supabase/tests/`.
 - Login page shell (`/login`) — UI only, form is disabled/not wired up.
 - `.env.example` with the three required env vars.
 
-Not yet done (stages 2-8): no Supabase project is connected, no database
-migrations/RLS exist, the attendance rule engine and register grid are
-unimplemented stubs, there is no CSV import, no reports/export, no tests,
-no CI, and this has not been deployed anywhere.
+Not yet done (stages 3-8): no application code queries these tables yet,
+the attendance rule engine and register grid are unimplemented stubs,
+there is no CSV import, no reports/export, no atomic batch-command
+endpoints, no CI, and this has not been deployed anywhere.
 
 ## Setup
 
