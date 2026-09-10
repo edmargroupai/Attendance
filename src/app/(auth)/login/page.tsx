@@ -1,4 +1,13 @@
-export default function LoginPage() {
+import { signIn, signUp } from "./actions";
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; mode?: string }>;
+}) {
+  const { error, mode } = await searchParams;
+  const isSignUp = mode === "signup";
+
   return (
     <main className="flex flex-1 flex-col items-center justify-center p-8">
       <div className="w-full max-w-sm space-y-6">
@@ -6,58 +15,72 @@ export default function LoginPage() {
           <h1 className="text-xl font-semibold text-slate-900">
             EdMar Attendance Register
           </h1>
-          <p className="text-sm text-slate-600">Sign in to your workspace</p>
+          <p className="text-sm text-slate-600">
+            {isSignUp ? "Create your workspace" : "Sign in to your workspace"}
+          </p>
         </div>
 
-        {/*
-          Stage 1 shell only. Not wired to a live Supabase project yet —
-          no NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-          is configured. Stage 2 wires this form to Supabase email/password
-          auth via src/lib/supabase/client.ts.
-        */}
-        <form className="space-y-4">
+        {error ? (
+          <p className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        ) : null}
+
+        <form action={isSignUp ? signUp : signIn} className="space-y-4">
           <div className="space-y-1">
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-slate-700"
-            >
+            <label htmlFor="email" className="block text-sm font-medium text-slate-700">
               Email
             </label>
             <input
               id="email"
               name="email"
               type="email"
+              required
               autoComplete="email"
-              disabled
-              className="w-full rounded border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+              className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
               placeholder="teacher@school.edu"
             />
           </div>
           <div className="space-y-1">
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-slate-700"
-            >
+            <label htmlFor="password" className="block text-sm font-medium text-slate-700">
               Password
             </label>
             <input
               id="password"
               name="password"
               type="password"
-              autoComplete="current-password"
-              disabled
-              className="w-full rounded border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+              required
+              minLength={6}
+              autoComplete={isSignUp ? "new-password" : "current-password"}
+              className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
               placeholder="••••••••"
             />
           </div>
           <button
             type="submit"
-            disabled
-            className="w-full rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="w-full rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
           >
-            Sign in (not yet connected)
+            {isSignUp ? "Create account" : "Sign in"}
           </button>
         </form>
+
+        <p className="text-center text-sm text-slate-600">
+          {isSignUp ? (
+            <>
+              Already have an account?{" "}
+              <a href="/login" className="font-medium text-slate-900 underline">
+                Sign in
+              </a>
+            </>
+          ) : (
+            <>
+              Need a workspace?{" "}
+              <a href="/login?mode=signup" className="font-medium text-slate-900 underline">
+                Create one
+              </a>
+            </>
+          )}
+        </p>
       </div>
     </main>
   );

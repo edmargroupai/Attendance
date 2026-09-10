@@ -5,7 +5,7 @@ Class attendance register app. Full product/technical spec:
 
 ## Status
 
-**Stage 2 of 8 complete** (database schema/RLS, per spec section 9).
+**Stage 3 of 8 complete** (classes/calendar/students, per spec section 9).
 
 Done:
 
@@ -22,13 +22,21 @@ Done:
   table, a generic audit trigger, and cross-table invariant triggers
   (term-in-academic-year, attendance/enrolment same-class).
 - pgTAP owner-isolation and constraint tests in `supabase/tests/`.
-- Login page shell (`/login`) — UI only, form is disabled/not wired up.
+- Real Supabase auth: sign in/up (`/login`), session middleware
+  (`src/proxy.ts`), sign-out, auto-provisioned `teacher_settings` row.
+- Calendar page (`/calendar`): create academic years and classes,
+  deterministic open-session generation, closures with a marked-slot
+  guard.
+- Students page (`/students`): typed entry, paste-list and CSV import
+  (validated, transactional via the `import_students` Postgres function),
+  an alphabetically-grouped boys/girls roster filterable by an "as of"
+  date so mid-month arrivals/withdrawals show correctly, and withdrawal.
 - `.env.example` with the three required env vars.
 
-Not yet done (stages 3-8): no application code queries these tables yet,
-the attendance rule engine and register grid are unimplemented stubs,
-there is no CSV import, no reports/export, no atomic batch-command
-endpoints, no CI, and this has not been deployed anywhere.
+Not yet done (stages 4-8): the attendance rule engine and register grid
+are unimplemented stubs, no reports/export, no atomic batch-command/
+revision/idempotency endpoints, no CI, and this has not been deployed
+anywhere.
 
 ## Setup
 

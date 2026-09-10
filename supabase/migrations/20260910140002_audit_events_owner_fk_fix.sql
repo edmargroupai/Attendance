@@ -1,0 +1,12 @@
+-- Bug found while testing Stage 3: deleting an auth.users row cascades to
+-- students/classes/enrolments/calendar_sessions/attendance_records (all
+-- owner_id ... on delete cascade), and each of those cascaded deletes
+-- fires the generic audit trigger (Stage 2), which tries to INSERT a new
+-- audit_events row for that same owner_id - but by then, within the same
+-- cascading DELETE, the parent auth.users row is already gone, so the FK
+-- below rejected the insert and blocked the entire delete.
+--
+-- Audit history is also meant to outlive the account it recorded (it's a
+-- permanent record, not account-scoped state), so the fix is to drop the
+-- FK rather than reorder triggers.
+alter table audit_events drop constraint audit_events_owner_id_fkey;

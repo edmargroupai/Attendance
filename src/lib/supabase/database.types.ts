@@ -443,7 +443,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      import_students: {
+        Args: { p_class_id: string; p_rows: Json }
+        Returns: Json
+      }
     }
     Enums: {
       attendance_status: "P" | "A" | "L" | "Ex"
