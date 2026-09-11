@@ -5,6 +5,12 @@ import { defineConfig, devices } from "@playwright/test";
 // the required CI gate - CI runners sharing IPs could trip Supabase's
 // auth rate limits (spec section 7: sign_in_sign_ups = 30/5min/IP), and
 // every run signs up and deletes a real throwaway account.
+// E2E_BASE_URL lets this same suite run as a production smoke test
+// (E2E_BASE_URL=https://your-deploy.vercel.app npm run test:e2e) without
+// starting/expecting a local dev server.
+const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+const isRemote = baseURL !== "http://localhost:3000";
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
@@ -16,15 +22,17 @@ export default defineConfig({
   retries: 0,
   reporter: "list",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL,
     trace: "retain-on-failure",
   },
-  webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000/login",
-    reuseExistingServer: true,
-    timeout: 60_000,
-  },
+  webServer: isRemote
+    ? undefined
+    : {
+        command: "npm run dev",
+        url: "http://localhost:3000/login",
+        reuseExistingServer: true,
+        timeout: 60_000,
+      },
   projects: [
     {
       name: "desktop-1366",
