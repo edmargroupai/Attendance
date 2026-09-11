@@ -81,9 +81,48 @@ Done:
   Its logic (including the `import_students` role/JWT-claim setup) was
   verified against the live project and then deleted from it; never run
   seed.sql against a real project.
+- **Deployed to Vercel and confirmed working**:
+  https://attendance-gules-ten.vercel.app — the full sign-up → class →
+  student → attendance → reload → reports flow was run against it via
+  the Playwright suite (`E2E_BASE_URL=<url> npm run test:e2e`), not just
+  a homepage check. Getting there required finding two stacked bugs that
+  only existed once real edge/serverless infrastructure was involved
+  (see "Two production-only bugs" below) — nothing local testing alone
+  would have caught.
 
 Everything from the spec's 8-stage build sequence is done. What's
 outside that sequence and still worth knowing:
+
+### Two production-only bugs (found and fixed after deploying)
+
+The site 500'd on every single request once actually deployed, despite
+all local checks (build, typecheck, E2E against local dev) passing.
+Two separate bugs stacked:
+
+1. **`src/lib/supabase/env.ts` read `process.env[name]` dynamically**
+   (bracket access via a variable) through a shared helper. Next.js's
+   Edge Runtime — which `src/proxy.ts` (middleware, runs on every
+   request) uses by default — only inlines env vars it can statically
+   detect via literal `process.env.NEXT_PUBLIC_X` dot-notation at build
+   time. A dynamic lookup is invisible to that analysis and silently
+   resolves to `undefined` at the edge, even though the identical code
+   works fine in a plain Node.js server context — which is exactly what
+   `next dev` and a local `next build` always use, so this never showed
+   up until a real Vercel deploy. Fixed: two separate getters, each with
+   its own literal property access.
+2. **The three env vars in Vercel had been added as type `"sensitive"`**
+   rather than the normal `"encrypted"` — invisible in both the
+   dashboard and `vercel env ls`; only the Management API's raw `type`
+   field revealed it. Sensitive-typed vars aren't exposed for
+   `NEXT_PUBLIC_` build-time inlining the normal way. Fixed by deleting
+   and recreating them as `"encrypted"` via the API.
+
+Neither bug alone explained the symptom (fixing only #1 still 500'd;
+#2 alone would have too) — both were required. Diagnosed via
+`vercel logs` (the actual thrown error, not just "500") and a direct
+Management API call, not by guessing from the dashboard UI. If you ever
+see a Next.js app 500 in production that works fine with `next dev`
+locally, check both of these.
 
 - The Reports page's on-screen rendering was verified via unit tests
   reproducing spec section 9's fixture through the same export builders
@@ -127,28 +166,33 @@ app's browser-reachable code or env vars.
 ## Deployment (Vercel)
 
 The spec's stack is Vercel for the app, Supabase for auth/database.
+**Live**: https://attendance-gules-ten.vercel.app (Vercel project
+`edmargroupai/attendance`, auto-deploys on push to `main` via the GitHub
+integration).
 
-1. Import this GitHub repo into Vercel (a Next.js project is
+1. Import the GitHub repo into Vercel (a Next.js project is
    auto-detected — no build config needed).
 2. Set these environment variables in the Vercel project (Settings ->
-   Environment Variables), separately per environment (Preview vs
-   Production) if you use different Supabase projects for each — spec
-   section 10: "Separate development/preview data from production
-   student data":
+   Environment Variables) as type **Encrypted, not Sensitive** — see
+   "Two production-only bugs" above for why that distinction matters —
+   separately per environment (Preview vs Production) if you use
+   different Supabase projects for each — spec section 10: "Separate
+   development/preview data from production student data":
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
    - `NEXT_PUBLIC_APP_URL` — the exact deployed URL for that environment
-3. In Supabase (Authentication -> URL Configuration), add that same URL
-   to Site URL / Redirect URLs for auth to work there — this project's
-   `supabase/config.toml` only configures `localhost:3000`;
-   `supabase config push` would overwrite whatever's set for a
-   deployed URL with local dev's, so **set the deployed URL directly in
-   the Supabase dashboard**, not via `config push`, once one exists.
-4. Deploy. Vercel builds and redeploys automatically on push to `main`
-   (Production) and on every PR (Preview) once connected.
-
-No production deployment has been done from this session — only local
-dev and the linked Supabase dev project have been exercised.
+3. Env var changes need a fresh deployment to take effect — redeploying
+   an *existing* build (dashboard "Redeploy", or `vercel redeploy`) can
+   replay that build's original env snapshot rather than picking up
+   current values. Use `vercel deploy --prod --force` (or push a new
+   commit) if a redeploy doesn't seem to pick up a var change.
+4. This app only uses email+password auth, so Supabase's redirect-URL
+   allowlist isn't load-bearing for basic sign-in — but
+   `supabase/config.toml`'s `additional_redirect_urls` already includes
+   the deployed URL for when magic-link/OAuth is added later. If you add
+   more deployment URLs, add them there and `supabase config push` (the
+   CLI session used to build this expired mid-session — `supabase login`
+   again first).
 
 ## Database migrations
 
@@ -199,7 +243,9 @@ Recovery or daily backups are enabled.
       section, and this checklist's caveats below)
 
 Remaining limitations, stated plainly:
-- No production deployment exists yet (see Deployment above).
+- Deployed and confirmed working (see Deployment above), but this is
+  still the same dev-tier Supabase project used throughout the build —
+  not a separated production database.
 - Backup/restore capability is unverified (see Backups above).
 - `supabase db reset`/local pgTAP (`supabase test db`) haven't been run
   — Docker wasn't available in the building session; all schema/RLS/
